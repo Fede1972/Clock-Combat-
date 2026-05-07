@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0c0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Combat Clock">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>COMBAT CLOCK</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --accent: #00ff88;
+    --accent-glow: rgba(0,255,136,0.4);
+    --accent-dim: rgba(0,255,136,0.15);
+    --red: #ff2244;
+    --amber: #ffaa00;
+    --bg: #0a0c0f;
+    --panel: #0f1318;
+    --border: #1e2a30;
+    --dim: #2a3a40;
+    --text: #c8d8e0;
+  }
+
+  body.theme-green  { --accent:#00ff88; --accent-glow:rgba(0,255,136,0.4);  --accent-dim:rgba(0,255,136,0.15);  --bg:#0a0c0f; --panel:#0f1318; --border:#1a2820; --dim:#1e3028; --text:#b0d8c0; }
+  body.theme-blue   { --accent:#00cfff; --accent-glow:rgba(0,207,255,0.4);  --accent-dim:rgba(0,207,255,0.15);  --bg:#05080f; --panel:#080c18; --border:#101c30; --dim:#182840; --text:#90c0e0; }
+  body.theme-amber  { --accent:#ffaa00; --accent-glow:rgba(255,170,0,0.4);  --accent-dim:rgba(255,170,0,0.15);  --bg:#0c0900; --panel:#141000; --border:#2a1e00; --dim:#3a2a00; --text:#d8c090; }
+  body.theme-red    { --accent:#ff3366; --accent-glow:rgba(255,51,102,0.4); --accent-dim:rgba(255,51,102,0.15); --bg:#0f0508; --panel:#180810; --border:#300818; --dim:#401020; --text:#d890a0; }
+  body.theme-white  { --accent:#ffffff; --accent-glow:rgba(255,255,255,0.3);--accent-dim:rgba(255,255,255,0.1); --bg:#050505; --panel:#0d0d0d; --border:#222;    --dim:#333;    --text:#cccccc; }
+  body.theme-cyan   { --accent:#00ffee; --accent-glow:rgba(0,255,238,0.4);  --accent-dim:rgba(0,255,238,0.15);  --bg:#020c0c; --panel:#041414; --border:#082828; --dim:#0c3838; --text:#90d8d0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    touch-action: none;
+    transition: background 0.4s, color 0.4s;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  #app { width: 100vw; height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+  /* ===== CLOCK MODE ===== */
+  #clockMode {
+    display: flex; flex-direction: column;
+    width: 100%; height: 100%;
+    padding: 6px 14px;
+  }
+
+  .clock-top {
+    display: flex; justify-content: space-between; align-items: center;
+    flex: 0 0 auto; padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+
+  .date-display {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(13px, 3.2vw, 20px);
+    color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
+    transition: color 0.4s;
+  }
+
+  .top-right { display: flex; align-items: center; gap: 10px; }
+
+  .wake-indicator {
+    font-size: clamp(8px, 1.8vw, 11px);
+    color: var(--dim); letter-spacing: 2px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .wake-indicator.on { color: var(--accent); }
+  .wake-dot { width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
+  .wake-indicator.on .wake-dot { box-shadow: 0 0 6px currentColor; animation: blink 2s ease-in-out infinite; }
+
+  .status-dot {
+    width: 8px; height: 8px; background: var(--accent); border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent); animation: blink 2s ease-in-out infinite;
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .clock-main {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px; min-height: 0;
+  }
+
+  /* BIGGER NUMBERS */
+  .big-time {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: clamp(80px, 28vw, 240px);
+    color: var(--accent);
+    text-shadow: 0 0 40px var(--accent-glow), 0 0 80px var(--accent-dim);
+    letter-spacing: 4px; line-height: 0.95; user-select: none;
+    transition: color 0.4s, text-shadow 0.4s;
+  }
+  @media (orientation: landscape) {
+    .big-time { font-size: clamp(80px, 42vh, 260px); }
+  }
+
+  .seconds-bar {
+    width: 85%; max-width: 600px; height: 4px;
+    background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .seconds-fill {
+    height: 100%; background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    transition: width 0.9s linear, background 0.4s, box-shadow 0.4s;
+  }
+
+  .efemerides {
+    flex: 0 0 auto; border-top: 1px solid var(--border);
+    padding-top: 4px; display: flex; flex-direction: column; gap: 1px;
+  }
+  .efem-label { font-size: clamp(8px,1.8vw,11px); color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
+  .efem-text  { font-family: 'Rajdhani', sans-serif; font-size: clamp(11px,2.8vw,17px); color: var(--amber); letter-spacing: 1px; line-height: 1.2; }
+  .efem-none  { font-size: clamp(10px,2.2vw,13px); color: var(--dim); font-style: italic; }
+
+  .clock-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 5px; border-top: 1px solid var(--border);
+    flex: 0 0 auto; gap: 8px; flex-wrap: wrap;
+  }
+  .bottom-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .hourly-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: clamp(9px,1.8vw,12px); color: var(--dim);
+    cursor: pointer; user-select: none; padding: 5px 9px;
+    border: 1px solid var(--border); border-radius: 4px; transition: all 0.2s;
+  }
+  .hourly-toggle.active { color: var(--amber); border-color: var(--amber); }
+  .toggle-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid currentColor; position: relative; flex-shrink: 0; }
+  .hourly-toggle.active .toggle-dot::after { content:''; position:absolute; inset:1px; background:var(--amber); border-radius:50%; }
+
+  .btn-theme {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(9px,1.8vw,12px); letter-spacing: 2px;
+    color: var(--text); background: transparent;
+    border: 1px solid var(--border); padding: 5px 10px;
+    border-radius: 4px; cursor: pointer; transition: all 0.2s; user-select: none;
+  }
+  .btn-theme:active { transform: scale(0.95); }
+
+  .btn-combat {
+    font-family: 'Orbitron', monospace; font-weight: 700;
+    font-size: clamp(10px,2.2vw,15px); letter-spacing: 3px; text-transform: uppercase;
+    color: #0a0c0f; background: var(--red); border: none;
+    padding: 9px 18px; border-radius: 4px; cursor: pointer;
+    box-shadow: 0 0 18px rgba(255,34,68,0.5); transition: all 0.15s; user-select: none; flex-shrink: 0;
+  }
+  .btn-combat:active { transform: scale(0.95); }
+
+  /* ===== THEME PANEL ===== */
+  #themePanel {
+    display: none; position: fixed; bottom: 62px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px; gap: 10px;
+    flex-direction: column; align-items: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  }
+  #themePanel.open { display: flex; }
+  .theme-label { font-size: 10px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
+  .theme-swatches { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .swatch {
+    width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.2s;
+  }
+  .swatch:active { transform: scale(0.88); }
+  .swatch.active { border-color: white; transform: scale(1.15); }
+
+  /* ===== COMBAT MODE ===== */
+  #combatMode {
+    display: none; flex-direction: column;
+    width: 100%; height: 100%; padding: 6px 14px;
+  }
+  #combatMode.active { display: flex; }
+
+  .combat-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 5px; border-bottom: 1px solid var(--border);
+  }
+  .combat-title {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: clamp(13px,2.8vw,20px); color: var(--red); letter-spacing: 4px;
+    text-shadow: 0 0 15px rgba(255,34,68,0.5);
+  }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+
+  .btn-exit {
+    font-family: 'Share Tech Mono', monospace; font-size: clamp(9px,1.8vw,12px);
+    color: var(--dim); background: transparent; border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; letter-spacing: 2px; transition: all 0.2s;
+  }
+
+  .round-indicators { display: flex; justify-content: center; gap: 10px; padding: 5px 0; }
+  .round-pip { width: 36px; height: 8px; border-radius: 4px; background: var(--border); transition: all 0.3s; }
+  .round-pip.done    { background: var(--dim); }
+  .round-pip.active  { background: var(--red); box-shadow: 0 0 12px var(--red); }
+  .round-pip.pending { background: var(--border); }
+
+  .combat-main {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; min-height: 0;
+  }
+
+  .round-label {
+    font-family: 'Rajdhani', sans-serif; font-size: clamp(15px,3.2vw,22px);
+    color: var(--text); letter-spacing: 4px; text-transform: uppercase; opacity: 0.8;
+  }
+
+  /* BIGGER COMBAT TIMER */
+  .combat-time {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: clamp(80px, 26vw, 210px);
+    line-height: 0.95; letter-spacing: 4px; user-select: none;
+    transition: color 0.3s, text-shadow 0.3s;
+  }
+  @media (orientation: landscape) {
+    .combat-time { font-size: clamp(80px, 38vh, 220px); }
+  }
+  .combat-time.running { color: var(--accent); text-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--accent-dim); }
+  .combat-time.warning { color: var(--amber); text-shadow: 0 0 30px rgba(255,170,0,0.5); animation: pulse-amber 0.5s ease-in-out infinite alternate; }
+  .combat-time.stopped { color: var(--red); text-shadow: 0 0 30px rgba(255,34,68,0.4); }
+  .combat-time.idle    { color: var(--dim); text-shadow: none; }
+
+  @keyframes pulse-amber {
+    from { text-shadow: 0 0 20px rgba(255,170,0,0.4); }
+    to   { text-shadow: 0 0 50px rgba(255,170,0,0.8); }
+  }
+
+  .timer-progress { width: 85%; max-width: 600px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .timer-fill { height: 100%; border-radius: 3px; transition: width 0.9s linear, background 0.3s; }
+
+  .config-panel { display: flex; justify-content: center; align-items: center; gap: 32px; padding: 6px 0; flex-wrap: wrap; }
+  .config-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .config-label { font-size: clamp(13px,2.8vw,18px); color: var(--text); letter-spacing: 3px; text-transform: uppercase; opacity: 0.85; }
+  .config-controls { display: flex; align-items: center; gap: 14px; }
+
+  .cfg-btn {
+    width: 44px; height: 44px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 24px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s; user-select: none;
+  }
+  .cfg-btn:active { transform: scale(0.9); background: var(--border); }
+
+  .cfg-value {
+    font-family: 'Orbitron', monospace; font-weight: 700;
+    font-size: clamp(24px,5vw,36px); color: var(--text); min-width: 52px; text-align: center;
+  }
+
+  .combat-controls {
+    display: flex; justify-content: center; gap: 12px;
+    padding-top: 5px; border-top: 1px solid var(--border); flex: 0 0 auto;
+  }
+
+  .btn-main {
+    font-family: 'Orbitron', monospace; font-weight: 700;
+    font-size: clamp(11px,2.3vw,15px); letter-spacing: 3px;
+    border: none; padding: 10px 22px; border-radius: 4px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .btn-start { background: var(--accent); color: var(--bg); box-shadow: 0 0 20px var(--accent-glow); transition: background 0.4s, box-shadow 0.4s, color 0.4s; }
+  .btn-start:active { transform: scale(0.95); }
+  .btn-stop  { background: var(--red); color: #0a0c0f; box-shadow: 0 0 20px rgba(255,34,68,0.4); }
+  .btn-reset { background: transparent; color: var(--dim); border: 1px solid var(--border) !important; }
+  .btn-reset:active { transform: scale(0.95); }
+  .btn-main:disabled { opacity: 0.3; cursor: default; transform: none !important; }
+
+  #flashOverlay { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9997; }
+  #flashOverlay.flash { animation: flashAnim 0.6s ease-out forwards; }
+  @keyframes flashAnim { 0%{opacity:0.7} 100%{opacity:0} }
+
+  /* Fullscreen button */
+  #btnFullscreen {
+    position: fixed;
+    top: 6px; right: 6px;
+    z-index: 5000;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-size: 16px;
+    width: 30px; height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  #btnFullscreen:active { transform: scale(0.9); }
+  #btnFullscreen.hidden { display: none; }
+
+  /* Ensure bottom controls never overflow */
+  .clock-bottom, .combat-controls {
+    flex-shrink: 0;
+  }
+
+  /* Chrome / desktop fixes */
+  html, body { height: 100dvh; min-height: 100vh; }
+  #app { height: 100dvh; min-height: 100vh; }
+
+  /* Guarantee bottom bar always visible */
+  .clock-bottom {
+    min-height: 44px;
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+  .combat-controls {
+    min-height: 48px;
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  /* On wider screens (Chrome desktop), cap the clock width and center */
+  @media (min-width: 768px) {
+    #clockMode, #combatMode { max-width: 900px; margin: 0 auto; }
+    .big-time    { font-size: clamp(100px, 20vw, 260px); }
+    .combat-time { font-size: clamp(100px, 18vw, 240px); }
+    #btnFullscreen { top: 10px; right: 10px; width: 36px; height: 36px; font-size: 18px; }
+  }
+
+  /* Make sure the color/combat buttons are always a good tap size */
+  .btn-combat { min-height: 40px; min-width: 100px; }
+  .btn-theme  { min-height: 36px; }
+  .hourly-toggle { min-height: 36px; }
+
+  /* ===== LOGO BACKGROUND ===== */
+  #logoBackground {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 0;
+  }
+  #logoBackground img {
+    width: min(70vw, 70vh);
+    height: auto;
+    opacity: 0.08;
+    mix-blend-mode: luminosity;
+    filter: invert(1);
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* Ensure all content is above logo */
+  #app { z-index: 1; position: relative; }
+  #themePanel { z-index: 1001; }
+  #btnFullscreen { z-index: 5001; }
+  #flashOverlay { z-index: 9997; }
+
+  /* ===== TITLE BAR ===== */
+  .title-bar {
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: clamp(15px, 4.5vw, 24px);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-shadow: 0 0 15px var(--accent-glow);
+    padding: 5px 8px 4px;
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+    transition: color 0.4s, text-shadow 0.4s;
+    line-height: 1.3;
+  }
+  .title-sep {
+    color: var(--accent);
+    opacity: 0.4;
+    margin: 0 6px;
+  }
+</style>
+</head>
+<body class="theme-green">
+
+<div id="logoBackground">
+  <img id="logoImg" src="" alt="Moo Duk Kwan" draggable="false">
+</div>
+<button id="btnFullscreen" onclick="toggleFullscreen()" title="Pantalla completa">⛶</button>
+<div id="flashOverlay"></div>
+
+<div id="app">
+
+  <!-- CLOCK MODE -->
+  <div id="clockMode">
+    <div class="title-bar">
+      Soo Bahk Do <span class="title-sep">◆</span> Moo Duk Kwan <span class="title-sep">◆</span> Mar del Plata
+    </div>
+    <div class="clock-top">
+      <div class="date-display" id="dateDisplay">---</div>
+      <div class="top-right">
+        <div class="wake-indicator" id="wakeIndicator">
+          <div class="wake-dot"></div>
+          <span id="wakeText">SLEEP</span>
+        </div>
+        <div class="status-dot"></div>
+      </div>
+    </div>
+
+    <div class="clock-main">
+      <div class="big-time" id="bigTime">00:00</div>
+      <div class="seconds-bar"><div class="seconds-fill" id="secondsFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="efemerides">
+      <div class="efem-label">◈ Efemérides</div>
+      <div id="efemText" class="efem-none">Sin efemérides para hoy</div>
+    </div>
+
+    <div class="clock-bottom">
+      <div class="bottom-left">
+        <div class="hourly-toggle" id="hourlyToggle" onclick="toggleHourly()">
+          <div class="toggle-dot"></div>
+          <span>ALARMA/H</span>
+        </div>
+        <button class="btn-theme" onclick="toggleThemePanel()">🎨 COLOR</button>
+      </div>
+      <button class="btn-combat" onclick="enterCombat()">⚔ COMBATE</button>
+    </div>
+  </div>
+
+  <!-- COMBAT MODE -->
+  <div id="combatMode">
+    <div class="title-bar">
+      Soo Bahk Do <span class="title-sep">◆</span> Moo Duk Kwan <span class="title-sep">◆</span> Mar del Plata
+    </div>
+    <div class="combat-header">
+      <div class="combat-title">⚔ COMBAT MODE</div>
+      <div class="header-right">
+        <button class="btn-theme" onclick="toggleThemePanel()" style="padding:4px 8px;">🎨</button>
+        <button class="btn-exit" onclick="exitCombat()">← RELOJ</button>
+      </div>
+    </div>
+
+    <div class="round-indicators" id="roundIndicators"></div>
+
+    <div class="combat-main">
+      <div class="round-label" id="roundLabel">ROUND 1</div>
+      <div class="combat-time idle" id="combatTime">3:00</div>
+      <div class="timer-progress">
+        <div class="timer-fill" id="timerFill" style="width:100%; background: var(--dim)"></div>
+      </div>
+    </div>
+
+    <div class="config-panel">
+      <div class="config-group">
+        <div class="config-label">Min / Round</div>
+        <div class="config-controls">
+          <div class="cfg-btn" onclick="changeTime(-1)" id="timeMinus">−</div>
+          <div class="cfg-value" id="timeValue">3</div>
+          <div class="cfg-btn" onclick="changeTime(1)">+</div>
+        </div>
+      </div>
+      <div class="config-group">
+        <div class="config-label">Rounds</div>
+        <div class="config-controls">
+          <div class="cfg-btn" onclick="changeRounds(-1)" id="roundMinus">−</div>
+          <div class="cfg-value" id="roundValue">3</div>
+          <div class="cfg-btn" onclick="changeRounds(1)" id="roundPlus">+</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="combat-controls">
+      <button class="btn-main btn-reset" onclick="resetCombat()">RESET</button>
+      <button class="btn-main btn-start" onclick="startStop()" id="btnStartStop">▶ START</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- THEME PANEL -->
+<div id="themePanel">
+  <div class="theme-label">Esquema de color</div>
+  <div class="theme-swatches">
+    <div class="swatch active" style="background:#00ff88;" onclick="setTheme('green',this)" title="Verde"></div>
+    <div class="swatch" style="background:#00cfff;" onclick="setTheme('blue',this)"  title="Azul"></div>
+    <div class="swatch" style="background:#ffaa00;" onclick="setTheme('amber',this)" title="Ámbar"></div>
+    <div class="swatch" style="background:#ff3366;" onclick="setTheme('red',this)"   title="Rojo"></div>
+    <div class="swatch" style="background:#ffffff;" onclick="setTheme('white',this)" title="Blanco"></div>
+    <div class="swatch" style="background:#00ffee;" onclick="setTheme('cyan',this)"  title="Cian"></div>
+  </div>
+</div>
+
+<script>
+// ===== EFEMÉRIDES =====
+const efemerides = {
+  "01-01":"1804 · Haití proclama su independencia — primera república negra libre",
+  "01-06":"1412 · Nace Juana de Arco, heroína francesa",
+  "01-15":"1929 · Nace Martin Luther King Jr.",
+  "01-17":"1706 · Nace Benjamin Franklin",
+  "01-27":"1756 · Nace Wolfgang Amadeus Mozart",
+  "02-04":"1922 · Nace Rosa Parks",
+  "02-11":"1847 · Nace Thomas Alva Edison",
+  "02-14":"1876 · Bell y Gray patentan el teléfono el mismo día",
+  "02-19":"1473 · Nace Nicolás Copérnico",
+  "02-20":"1962 · John Glenn orbita la Tierra por primera vez",
+  "03-03":"1847 · Nace Alexander Graham Bell",
+  "03-14":"1879 · Nace Albert Einstein",
+  "03-15":"44 a.C. · Asesinato de Julio César en los Idus de Marzo",
+  "04-15":"1452 · Nace Leonardo da Vinci",
+  "04-23":"1616 · Muere Miguel de Cervantes, autor del Quijote",
+  "05-05":"1821 · Muere Napoleón Bonaparte en Santa Elena",
+  "05-06":"1954 · Roger Bannister corre la milla en menos de 4 minutos",
+  "05-17":"1954 · Fallo Brown v. Board of Education contra la segregación racial",
+  "05-25":"1977 · Estreno de Star Wars, que cambió el cine para siempre",
+  "06-06":"1944 · Día D: desembarco aliado en Normandía",
+  "06-21":"Solsticio de verano en el hemisferio norte",
+  "07-04":"1776 · Declaración de Independencia de EE.UU.",
+  "07-10":"1856 · Nace Nikola Tesla",
+  "07-20":"1969 · Neil Armstrong pisa la Luna por primera vez",
+  "07-28":"1914 · Inicio de la Primera Guerra Mundial",
+  "08-06":"1945 · Primera bomba atómica lanzada sobre Hiroshima",
+  "08-15":"1769 · Nace Napoleón Bonaparte",
+  "09-11":"2001 · Atentados terroristas en Nueva York y Washington",
+  "09-15":"1830 · Inauguración del primer ferrocarril de pasajeros",
+  "10-12":"1492 · Cristóbal Colón llega a América",
+  "10-28":"1886 · Inauguración de la Estatua de la Libertad",
+  "11-09":"1945 · Fundación de la Moo Duk Kwan por JSJ Hwang Kee  ◈  1989 · Caída del Muro de Berlín",
+  "11-10":"1444 · Batalla de Varna — cruzada cristiana vs Imperio Otomano",
+  "11-19":"1863 · Discurso de Gettysburg de Abraham Lincoln",
+  "12-17":"1903 · Los hermanos Wright logran el primer vuelo motorizado",
+  "12-21":"Solsticio de invierno en el hemisferio norte",
+  "12-25":"Navidad — celebración en todo el mundo cristiano",
+  "12-31":"Noche de Año Nuevo — víspera del nuevo año"
+};
+
+// ===== WAKE LOCK - triple redundancy =====
+let wakeLock = null;
+
+// Method 1: Wake Lock API (Chrome/Android HTTPS)
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      updateWakeUI(true);
+      wakeLock.addEventListener('release', () => {
+        wakeLock = null;
+        setTimeout(requestWakeLock, 1000);
+      });
+      return;
+    } catch(e) {}
+  }
+  updateWakeUI(false);
+}
+
+// Method 2: NoSleep.js technique - tiny invisible video loop
+let noSleepVideo = null;
+function startNoSleepVideo() {
+  if (noSleepVideo) return;
+  noSleepVideo = document.createElement('video');
+  noSleepVideo.setAttribute('playsinline', '');
+  noSleepVideo.setAttribute('muted', '');
+  noSleepVideo.loop = true;
+  noSleepVideo.style.cssText = 'position:fixed;top:-2px;left:-2px;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:1;';
+  // WebM with 1 frame (more compatible than mp4 for data URIs)
+  noSleepVideo.src = "data:video/webm;base64,GkXfowEAAAAAAAAfQoaBAUL3gQFC8oEEQvOBCEKChHdlYm1Ch4ECQoWBAhhTgGcBAAAAAAAVkhFNm3RALE27i1OrhBVJqWZTrIHfTbuMU6uEFlSua1OsggEwTbuMU6uEHFO7a1OsghBTwqTA3LjUWkW6jh0VODchHTgn14DtgQCFVl9WUDglhv/EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmAQAAAAAAAEUq17GDD0JATYCNTGF2ZjU4LjIwLjEwMFdBjUxhZmY1OC4yMC4xMDBEiYhARAAAAAAAABZUrmsBAAAAAAAAHk3iD4xEe2ajhmVi+YecEve/AjqRe2ajhmVi+YecIqcBAAAAAAAAH9F7U1uoohBzdJqC0L2EMjRT4xNsTMPpjxsmHll5VkArQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAA";
+  document.body.appendChild(noSleepVideo);
+  noSleepVideo.play().then(() => updateWakeUI(true)).catch(() => {});
+}
+
+// Method 3: requestAnimationFrame heartbeat - keeps JS active
+let rafRunning = false;
+function startRAFHeartbeat() {
+  if (rafRunning) return;
+  rafRunning = true;
+  let last = 0;
+  function beat(ts) {
+    if (!rafRunning) return;
+    // Touch DOM very lightly every 10s to signal activity
+    if (ts - last > 10000) {
+      last = ts;
+      const d = document.getElementById('wakeIndicator');
+      if (d) { d.style.opacity = '0.99'; setTimeout(() => { d.style.opacity = '1'; }, 50); }
+    }
+    requestAnimationFrame(beat);
+  }
+  requestAnimationFrame(beat);
+}
+
+function updateWakeUI(on) {
+  const el = document.getElementById('wakeIndicator');
+  const txt = document.getElementById('wakeText');
+  if (el) el.className = 'wake-indicator' + (on ? ' on' : '');
+  if (txt) txt.textContent = on ? 'AWAKE' : 'SLEEP';
+}
+
+// Start everything after first user gesture (required by browsers)
+let noSleepStarted = false;
+function startAllNoSleep() {
+  if (noSleepStarted) return;
+  noSleepStarted = true;
+  requestWakeLock();
+  startNoSleepVideo();
+  startRAFHeartbeat();
+  updateWakeUI(true);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    requestWakeLock();
+    if (noSleepVideo && noSleepVideo.paused) noSleepVideo.play().catch(()=>{});
+  }
+});
+
+// ===== THEME =====
+let themeOpen = false;
+function setTheme(name, el) {
+  document.body.className = `theme-${name}`;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  if (el) el.classList.add('active');
+  setTimeout(() => { themeOpen = false; document.getElementById('themePanel').classList.remove('open'); }, 300);
+}
+function toggleThemePanel() {
+  themeOpen = !themeOpen;
+  document.getElementById('themePanel').classList.toggle('open', themeOpen);
+}
+document.addEventListener('click', e => {
+  if (themeOpen && !e.target.closest('#themePanel') && !e.target.closest('.btn-theme')) {
+    themeOpen = false; document.getElementById('themePanel').classList.remove('open');
+  }
+});
+
+// ===== STATE =====
+let hourlyAlarm = false, lastHour = -1;
+let roundDuration = 3, totalRounds = 3, currentRound = 1;
+let timeLeft = 0, timerInterval = null, isRunning = false, totalSeconds = 0;
+
+// ===== CLOCK =====
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = now.getSeconds();
+  document.getElementById('bigTime').textContent = `${h}:${m}`;
+  document.getElementById('secondsFill').style.width = `${(s/59)*100}%`;
+
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  document.getElementById('dateDisplay').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const dd = String(now.getDate()).padStart(2,'0');
+  const efemEl = document.getElementById('efemText');
+  const ef = efemerides[`${mm}-${dd}`];
+  efemEl.className = ef ? 'efem-text' : 'efem-none';
+  efemEl.textContent = ef || 'Sin efemérides para hoy';
+
+  if (hourlyAlarm && now.getHours() !== lastHour && now.getMinutes() === 0 && s < 3) {
+    lastHour = now.getHours(); playHourlyBeep();
+  }
+}
+function toggleHourly() {
+  hourlyAlarm = !hourlyAlarm;
+  document.getElementById('hourlyToggle').classList.toggle('active', hourlyAlarm);
+}
+
+// ===== AUDIO =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+function getAudioCtx() { if (!actx) actx = new AudioCtx(); return actx; }
+function beep(freq, dur, type='square', vol=0.3) {
+  const ctx = getAudioCtx();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+  o.start(ctx.currentTime); o.stop(ctx.currentTime + dur);
+}
+function playHourlyBeep() {
+  setTimeout(()=>beep(880,0.15,'square',0.25),0);
+  setTimeout(()=>beep(880,0.15,'square',0.25),200);
+  setTimeout(()=>beep(1100,0.3,'sine',0.2),450);
+}
+function playRoundEnd() {
+  [0,350,700].forEach(t=>setTimeout(()=>{beep(600,0.05,'square',0.4); setTimeout(()=>beep(900,0.4,'sine',0.35),50);},t));
+  flash();
+}
+function playFight() { beep(440,0.1,'square',0.3); setTimeout(()=>beep(660,0.4,'sine',0.3),150); }
+function flash() {
+  const el = document.getElementById('flashOverlay');
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+// ===== COMBAT =====
+function enterCombat() {
+  document.getElementById('clockMode').style.display = 'none';
+  document.getElementById('combatMode').style.display = 'flex';
+  document.getElementById('combatMode').classList.add('active');
+  resetCombat();
+}
+function exitCombat() {
+  stopTimer();
+  document.getElementById('combatMode').classList.remove('active');
+  document.getElementById('combatMode').style.display = 'none';
+  document.getElementById('clockMode').style.display = 'flex';
+}
+
+function buildRoundPips() {
+  const cont = document.getElementById('roundIndicators');
+  cont.innerHTML = '';
+  for (let i = 1; i <= totalRounds; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'round-pip ' + (i < currentRound ? 'done' : i === currentRound ? 'active' : 'pending');
+    pip.id = `pip-${i}`;
+    cont.appendChild(pip);
+  }
+}
+function updatePips() {
+  for (let i = 1; i <= totalRounds; i++) {
+    const pip = document.getElementById(`pip-${i}`);
+    if (pip) pip.className = 'round-pip ' + (i < currentRound ? 'done' : i === currentRound ? 'active' : 'pending');
+  }
+}
+function formatTime(sec) { return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`; }
+
+function updateCombatDisplay() {
+  const el = document.getElementById('combatTime');
+  el.textContent = formatTime(timeLeft);
+  el.className = 'combat-time ' + (
+    !isRunning && timeLeft === totalSeconds ? 'idle' :
+    !isRunning ? 'stopped' :
+    timeLeft <= 10 ? 'warning' : 'running'
+  );
+  const pct = totalSeconds > 0 ? (timeLeft/totalSeconds)*100 : 100;
+  const fill = document.getElementById('timerFill');
+  fill.style.width = `${pct}%`;
+  fill.style.background = (timeLeft<=10 && isRunning) ? 'var(--amber)' : isRunning ? 'var(--accent)' : 'var(--dim)';
+  fill.style.boxShadow = isRunning ? `0 0 10px ${timeLeft<=10?'var(--amber)':'var(--accent)'}` : 'none';
+  document.getElementById('roundLabel').textContent = `ROUND ${currentRound} / ${totalRounds}`;
+  const btn = document.getElementById('btnStartStop');
+  btn.textContent = isRunning ? '⏸ PAUSA' : (timeLeft < totalSeconds && timeLeft > 0 ? '▶ REANUDAR' : '▶ START');
+  btn.className = 'btn-main ' + (isRunning ? 'btn-stop' : 'btn-start');
+}
+
+function startStop() { isRunning ? stopTimer() : startTimer(); }
+function startTimer() {
+  if (timeLeft <= 0) return;
+  isRunning = true; playFight(); updateCombatDisplay();
+  timerInterval = setInterval(() => {
+    if (timeLeft > 0) {
+      timeLeft--;
+      if (timeLeft === 10) beep(660,0.1,'square',0.2);
+      updateCombatDisplay();
+    } else {
+      clearInterval(timerInterval); isRunning = false; playRoundEnd();
+      if (currentRound < totalRounds) {
+        setTimeout(() => { currentRound++; timeLeft = totalSeconds; updatePips(); updateCombatDisplay(); }, 1500);
+      } else {
+        updateCombatDisplay();
+        document.getElementById('roundLabel').textContent = '¡COMBATE TERMINADO!';
+      }
+    }
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); isRunning = false; updateCombatDisplay(); }
+function resetCombat() { stopTimer(); currentRound=1; totalSeconds=roundDuration*60; timeLeft=totalSeconds; buildRoundPips(); updateCombatDisplay(); updateConfigUI(); }
+function changeTime(delta) {
+  if (isRunning) return;
+  roundDuration = Math.max(1, Math.min(15, roundDuration+delta));
+  totalSeconds = roundDuration*60; timeLeft = totalSeconds;
+  updateCombatDisplay(); updateConfigUI();
+}
+function changeRounds(delta) {
+  if (isRunning) return;
+  totalRounds = Math.max(1, Math.min(5, totalRounds+delta));
+  resetCombat();
+}
+function updateConfigUI() {
+  document.getElementById('timeValue').textContent = roundDuration;
+  document.getElementById('roundValue').textContent = totalRounds;
+  document.getElementById('timeMinus').style.opacity = roundDuration<=1?'0.3':'1';
+  document.getElementById('roundMinus').style.opacity = totalRounds<=1?'0.3':'1';
+  document.getElementById('roundPlus').style.opacity  = totalRounds>=5?'0.3':'1';
+}
+
+
+// ===== LOGO =====
+// Logo is embedded as base64 - will be replaced once file is accessible
+(function() {
+  const img = document.getElementById('logoImg');
+  img.onerror = function() {
+    document.getElementById('logoBackground').style.display = 'none';
+  };
+  // Try relative path (works if logo.jpg is in same folder as this HTML)
+  img.src = '1000161042.jpg';
+})();
+
+// ===== INIT =====
+updateClock();
+setInterval(updateClock, 1000);
+
+// ===== FULLSCREEN =====
+function requestFullscreenNow() {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (req && !document.fullscreenElement) req.call(el).catch(()=>{});
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    requestFullscreenNow();
+  } else {
+    const ex = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (ex) ex.call(document).catch(()=>{});
+  }
+}
+
+document.addEventListener('fullscreenchange', updateFsButton);
+document.addEventListener('webkitfullscreenchange', updateFsButton);
+function updateFsButton() {
+  const btn = document.getElementById('btnFullscreen');
+  btn.textContent = document.fullscreenElement ? '✕' : '⛶';
+}
+
+// Auto fullscreen on first touch (browsers require user gesture)
+function autoFullscreen() {
+  requestFullscreenNow();
+  startAllNoSleep();
+}
+document.addEventListener('touchstart', autoFullscreen, {once: true});
+document.addEventListener('click', autoFullscreen, {once: true});
+
+// Wake lock: try immediately on load
+requestWakeLock();
+
+// On first user gesture: start all wake-prevention methods
+function firstTouch() {
+  getAudioCtx();
+  startAllNoSleep();
+}
+document.addEventListener('touchstart', firstTouch, {once:true});
+document.addEventListener('click', firstTouch, {once:true});
+
+// Watchdog every 20s
+setInterval(() => {
+  if (!wakeLock) requestWakeLock();
+  if (noSleepVideo && noSleepVideo.paused) noSleepVideo.play().catch(()=>{});
+}, 20000);
+
+// ===== PWA SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
