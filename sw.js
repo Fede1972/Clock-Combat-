@@ -1,10 +1,12 @@
-const CACHE = 'combat-clock-v1';
+const CACHE = 'mdk-combat-clock-v5';
 const FILES = [
-  './combat-clock.html',
-  './manifest.json'
+  './combat-clock-5.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Install: cache all files
+// Install: pre-cache all files
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(c => c.addAll(FILES))
@@ -12,7 +14,7 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: delete old caches
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -22,7 +24,7 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Fetch: serve from cache, fallback to network
+// Fetch: cache-first, fallback to network
 self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))

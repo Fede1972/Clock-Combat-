@@ -1,12 +1,13 @@
 {
   "name": "Soo Bahk Do - Combat Clock",
-  "short_name": "Combat Clock",
+  "short_name": "MDK Clock",
   "description": "Reloj y cronómetro de combate - Moo Duk Kwan Mar del Plata",
-  "start_url": "./combat-clock.html",
+  "start_url": "./combat-clock-5.html",
+  "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
-  "background_color": "#0a0c0f",
-  "theme_color": "#0a0c0f",
+  "background_color": "#060810",
+  "theme_color": "#060810",
   "icons": [
     {
       "src": "icon-192.png",
